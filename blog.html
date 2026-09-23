@@ -245,9 +245,14 @@
    ========================================================= */
 const SUPABASE_URL = 'https://fzfrciwragdfmehstief.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ6ZnJjaXdyYWdkZm1laHN0aWVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAxNTU3OTksImV4cCI6MjEwNTczMTc5OX0.eyZdNAyNPJF8ltEgAuZ2blf19Z8Zh2MNqdm9YaZXYto';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
 const POST_PASSWORD = 'help2026'; // used for new posts, and (on post.html) for edit/delete
+
+let supabase = null;
+try {
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+} catch (err) {
+  console.error('Supabase failed to load:', err);
+}
 
 function formatDate(iso) {
   const d = new Date(iso);
@@ -262,6 +267,10 @@ function escapeHtml(str) {
 
 async function loadPosts() {
   const grid = document.getElementById('post-grid');
+  if (!supabase) {
+    grid.innerHTML = '<div class="post-empty">Could not connect right now. Please refresh.</div>';
+    return;
+  }
   const { data: posts, error } = await supabase
     .from('blog_posts')
     .select('*')
@@ -354,6 +363,11 @@ document.getElementById('post-form').addEventListener('submit', async (e) => {
 
   if (!title || !content) {
     status.textContent = 'Please add a title and some content.';
+    status.className = 'post-status err';
+    return;
+  }
+  if (!supabase) {
+    status.textContent = 'Could not connect. Please refresh the page and try again.';
     status.className = 'post-status err';
     return;
   }
