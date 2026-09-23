@@ -175,8 +175,14 @@
 <script>
 const SUPABASE_URL = 'https://fzfrciwragdfmehstief.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ6ZnJjaXdyYWdkZm1laHN0aWVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAxNTU3OTksImV4cCI6MjEwNTczMTc5OX0.eyZdNAyNPJF8ltEgAuZ2blf19Z8Zh2MNqdm9YaZXYto';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const POST_PASSWORD = 'help2026'; // same password used on blog.html for new posts
+
+let supabase = null;
+try {
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+} catch (err) {
+  console.error('Supabase failed to load:', err);
+}
 
 const params = new URLSearchParams(window.location.search);
 const postId = params.get('id');
@@ -197,6 +203,10 @@ async function loadPost() {
   const container = document.getElementById('post-container');
   if (!postId) {
     container.innerHTML = '<div class="post-empty">No post specified.</div>';
+    return;
+  }
+  if (!supabase) {
+    container.innerHTML = '<div class="post-empty">Could not connect right now. Please refresh.</div>';
     return;
   }
   const { data, error } = await supabase.from('blog_posts').select('*').eq('id', postId).single();
