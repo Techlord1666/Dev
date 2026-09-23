@@ -222,26 +222,32 @@ async function loadPost() {
     <div class="post-date">${formatDate(data.created_at)}</div>
     <h1>${escapeHtml(data.title)}</h1>
     <div class="post-content">${escapeHtml(data.content)}</div>
-    <div class="post-actions">
-      <button id="edit-trigger" type="button">Edit</button>
-      <button id="delete-trigger" type="button">Delete</button>
+    <div class="post-actions" id="post-actions">
+      <button id="manage-trigger" type="button">Edit</button>
     </div>
   `;
-  document.getElementById('edit-trigger').addEventListener('click', () => requestPassword('edit'));
-  document.getElementById('delete-trigger').addEventListener('click', () => requestPassword('delete'));
+  document.getElementById('manage-trigger').addEventListener('click', () => requestPassword());
 }
 loadPost();
+
+function showManageButtons() {
+  const actions = document.getElementById('post-actions');
+  actions.innerHTML = `
+    <button id="edit-trigger" type="button">Edit</button>
+    <button id="delete-trigger" type="button">Delete</button>
+  `;
+  document.getElementById('edit-trigger').addEventListener('click', openEditModal);
+  document.getElementById('delete-trigger').addEventListener('click', doDelete);
+}
 
 /* ---- Password gate ---- */
 const passwordModal = document.getElementById('password-modal');
 const editModal = document.getElementById('edit-modal');
-let pendingAction = null;
 
 function openModal(el) { el.classList.add('open'); }
 function closeModal(el) { el.classList.remove('open'); }
 
-function requestPassword(action) {
-  pendingAction = action;
+function requestPassword() {
   document.getElementById('password-input').value = '';
   document.getElementById('password-status').className = 'post-status';
   openModal(passwordModal);
@@ -259,23 +265,27 @@ document.getElementById('password-submit').addEventListener('click', async () =>
     return;
   }
   closeModal(passwordModal);
-  if (pendingAction === 'edit') {
-    document.getElementById('edit-title').value = currentPost.title;
-    document.getElementById('edit-content').value = currentPost.content;
-    document.getElementById('edit-image-preview').style.display = 'none';
-    editSelectedImageFile = null;
-    openModal(editModal);
-  } else if (pendingAction === 'delete') {
-    if (!confirm('Delete this post? This cannot be undone.')) return;
-    const { error } = await supabase.from('blog_posts').delete().eq('id', postId);
-    if (error) {
-      alert('Could not delete the post. Please try again.');
-      console.error(error);
-    } else {
-      window.location.href = 'blog.html';
-    }
-  }
+  showManageButtons();
 });
+
+function openEditModal() {
+  document.getElementById('edit-title').value = currentPost.title;
+  document.getElementById('edit-content').value = currentPost.content;
+  document.getElementById('edit-image-preview').style.display = 'none';
+  editSelectedImageFile = null;
+  openModal(editModal);
+}
+
+async function doDelete() {
+  if (!confirm('Delete this post? This cannot be undone.')) return;
+  const { error } = await supabase.from('blog_posts').delete().eq('id', postId);
+  if (error) {
+    alert('Could not delete the post. Please try again.');
+    console.error(error);
+  } else {
+    window.location.href = 'blog.html';
+  }
+}
 
 /* ---- Edit modal ---- */
 document.getElementById('edit-close').addEventListener('click', () => closeModal(editModal));
