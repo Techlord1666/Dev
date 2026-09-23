@@ -173,6 +173,7 @@
 <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
 <script src="js/main.js"></script>
 <script>
+(function () {
 const SUPABASE_URL = 'https://fzfrciwragdfmehstief.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ6ZnJjaXdyYWdkZm1laHN0aWVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAxNTU3OTksImV4cCI6MjEwNTczMTc5OX0.eyZdNAyNPJF8ltEgAuZ2blf19Z8Zh2MNqdm9YaZXYto';
 const POST_PASSWORD = 'help2026'; // same password used on blog.html for new posts
@@ -339,6 +340,8 @@ document.getElementById('edit-form').addEventListener('submit', async (e) => {
     submitBtn.disabled = false;
   }
 });
+
+})();
 </script>
 </body>
 </html>
