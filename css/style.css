@@ -575,6 +575,47 @@ section { padding: 96px 0; }
 .max-60 { max-width: 640px; }
 .mt-lg { margin-top: 64px; }
 
+/* ==========================================================================
+   Mobile refinements — smaller headings, a footer that actually fits
+   ========================================================================== */
+@media (max-width: 620px) {
+  .container { padding: 0 18px; }
+
+  h1 { font-size: clamp(1.8rem, 7.5vw, 2.4rem); }
+  h2 { font-size: clamp(1.4rem, 6vw, 1.8rem); }
+  h3 { font-size: clamp(1.05rem, 4.5vw, 1.25rem); }
+  p { font-size: 0.95rem; }
+
+  .hero h1 { font-size: clamp(1.7rem, 7.5vw, 2.2rem); }
+  .page-hero { padding: 116px 0 48px; }
+  .page-hero h1 { font-size: clamp(1.7rem, 7.5vw, 2.2rem); }
+
+  section { padding: 48px 0; }
+
+  .site-footer { padding: 40px 0 20px; margin-top: 24px; }
+  .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 26px;
+    padding-bottom: 26px;
+  }
+  .footer-grid > div:first-child p { max-width: none; }
+  .footer-grid h4 { margin-bottom: 10px; }
+  .footer-grid a { margin-bottom: 8px; }
+  .footer-bottom {
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    padding-top: 18px;
+    font-size: 0.78rem;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 400px) {
+  h1 { font-size: clamp(1.6rem, 8vw, 2rem); }
+  .hero h1, .page-hero h1 { font-size: clamp(1.55rem, 8vw, 1.9rem); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
 }
