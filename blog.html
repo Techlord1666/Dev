@@ -11,7 +11,6 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="stylesheet" href="css/style.css">
 <style>
-  /* ---- Blog-specific styles ---- */
   .blog-hero-grid { display:grid; gap:16px; }
   .post-grid {
     display: grid;
@@ -29,6 +28,9 @@
     display: flex;
     flex-direction: column;
     transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease);
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
   }
   .post-card:hover { transform: translateY(-5px); box-shadow: 0 22px 44px -20px rgba(44,15,61,0.25); }
   .post-card .thumb {
@@ -45,7 +47,7 @@
     text-transform: uppercase; color: var(--pink-600); margin-bottom: 8px;
   }
   .post-title { font-family: var(--font-display); font-size: 1.15rem; color: var(--purple-900); margin: 0 0 10px; line-height: 1.3; }
-  .post-excerpt { font-size: 0.92rem; color: var(--ink-soft); flex: 1; margin-bottom: 0; white-space: pre-line; }
+  .post-excerpt { font-size: 0.92rem; color: var(--ink-soft); flex: 1; margin-bottom: 0; white-space: pre-line; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; }
   .post-empty {
     grid-column: 1 / -1;
     text-align: center;
@@ -57,7 +59,6 @@
     border-radius: var(--radius);
   }
 
-  /* Footer upload trigger */
   .footer-upload-btn {
     background: none; border: none; cursor: pointer;
     color: rgba(255,255,255,0.55);
@@ -69,7 +70,6 @@
   }
   .footer-upload-btn:hover { color: white; }
 
-  /* Modal overlay */
   .modal-overlay {
     position: fixed; inset: 0; z-index: 300;
     background: rgba(30, 18, 38, 0.6);
@@ -155,7 +155,7 @@
 <section>
   <div class="container">
     <div class="post-grid" id="post-grid">
-      <!-- Posts render here via JS -->
+      <div class="post-empty">Loading posts…</div>
     </div>
   </div>
 </section>
@@ -214,7 +214,7 @@
   <div class="modal-box">
     <button class="modal-close" id="post-close" aria-label="Close">✕</button>
     <h3>New blog post</h3>
-    <p class="sub">This publishes straight to the blog page for anyone visiting this browser session's site data.</p>
+    <p class="sub">This publishes to the live blog for every visitor.</p>
     <form id="post-form">
       <div class="field">
         <label for="post-title">Title</label>
@@ -235,57 +235,23 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
 <script src="js/main.js"></script>
 <script>
 /* =========================================================
-   Blog: client-side storage using localStorage.
-   NOTE: This keeps posts in the visitor's own browser only —
-   it is NOT a shared database. Posts you add on your computer
-   won't automatically appear for other visitors on theirs.
-   To share posts with everyone, this needs a real backend
-   (see note at the bottom of the message this file came with).
+   Blog: shared storage via Supabase — posts are visible to
+   every visitor, not just this browser.
    ========================================================= */
-const STORAGE_KEY = 'devadi_blog_posts';
-const PASSWORD = 'help2026';
+const SUPABASE_URL = 'https://fzfrciwragdfmehstief.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ6ZnJjaXdyYWdkZm1laHN0aWVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAxNTU3OTksImV4cCI6MjEwNTczMTc5OX0.eyZdNAyNPJF8ltEgAuZ2blf19Z8Zh2MNqdm9YaZXYto';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-function loadPosts() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-  } catch (e) {
-    return [];
-  }
-}
-
-function savePosts(posts) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
-}
+const POST_PASSWORD = 'help2026'; // used for new posts, and (on post.html) for edit/delete
 
 function formatDate(iso) {
   const d = new Date(iso);
   return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-}
-
-function renderPosts() {
-  const grid = document.getElementById('post-grid');
-  const posts = loadPosts();
-  if (!posts.length) {
-    grid.innerHTML = '<div class="post-empty">No posts yet — check back soon, or tap "Upload" in the footer to add the first one.</div>';
-    return;
-  }
-  grid.innerHTML = posts.map(p => `
-    <article class="post-card">
-      ${p.image
-        ? `<img class="thumb" src="${p.image}" alt="${escapeHtml(p.title)}">`
-        : `<div class="thumb placeholder"><svg width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M21 16l-5-5-9 9"/></svg></div>`
-      }
-      <div class="post-body">
-        <div class="post-date">${formatDate(p.date)}</div>
-        <h3 class="post-title">${escapeHtml(p.title)}</h3>
-        <p class="post-excerpt">${escapeHtml(p.content)}</p>
-      </div>
-    </article>
-  `).join('');
 }
 
 function escapeHtml(str) {
@@ -294,7 +260,40 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-renderPosts();
+async function loadPosts() {
+  const grid = document.getElementById('post-grid');
+  const { data: posts, error } = await supabase
+    .from('blog_posts')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    grid.innerHTML = '<div class="post-empty">Could not load posts right now. Please refresh.</div>';
+    console.error(error);
+    return;
+  }
+
+  if (!posts.length) {
+    grid.innerHTML = '<div class="post-empty">No posts yet — check back soon, or tap "Upload" in the footer to add the first one.</div>';
+    return;
+  }
+
+  grid.innerHTML = posts.map(p => `
+    <a class="post-card" href="post.html?id=${p.id}">
+      ${p.image_url
+        ? `<img class="thumb" src="${p.image_url}" alt="${escapeHtml(p.title)}">`
+        : `<div class="thumb placeholder"><svg width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M21 16l-5-5-9 9"/></svg></div>`
+      }
+      <div class="post-body">
+        <div class="post-date">${formatDate(p.created_at)}</div>
+        <h3 class="post-title">${escapeHtml(p.title)}</h3>
+        <p class="post-excerpt">${escapeHtml(p.content)}</p>
+      </div>
+    </a>
+  `).join('');
+}
+
+loadPosts();
 
 /* ---- Modal helpers ---- */
 const passwordModal = document.getElementById('password-modal');
@@ -315,7 +314,7 @@ passwordModal.addEventListener('click', (e) => { if (e.target === passwordModal)
 document.getElementById('password-submit').addEventListener('click', () => {
   const val = document.getElementById('password-input').value;
   const status = document.getElementById('password-status');
-  if (val === PASSWORD) {
+  if (val === POST_PASSWORD) {
     closeModal(passwordModal);
     openModal(postModal);
   } else {
@@ -330,27 +329,28 @@ document.getElementById('password-input').addEventListener('keydown', (e) => {
 document.getElementById('post-close').addEventListener('click', () => closeModal(postModal));
 postModal.addEventListener('click', (e) => { if (e.target === postModal) closeModal(postModal); });
 
-/* ---- Image preview ---- */
-let selectedImageDataUrl = null;
+/* ---- Image preview + upload ---- */
+let selectedImageFile = null;
 document.getElementById('post-image').addEventListener('change', (e) => {
   const file = e.target.files[0];
   const preview = document.getElementById('post-image-preview');
-  if (!file) { preview.style.display = 'none'; selectedImageDataUrl = null; return; }
+  if (!file) { preview.style.display = 'none'; selectedImageFile = null; return; }
+  selectedImageFile = file;
   const reader = new FileReader();
   reader.onload = (ev) => {
-    selectedImageDataUrl = ev.target.result;
-    preview.src = selectedImageDataUrl;
+    preview.src = ev.target.result;
     preview.style.display = 'block';
   };
   reader.readAsDataURL(file);
 });
 
 /* ---- Publish post ---- */
-document.getElementById('post-form').addEventListener('submit', (e) => {
+document.getElementById('post-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const title = document.getElementById('post-title').value.trim();
   const content = document.getElementById('post-content').value.trim();
   const status = document.getElementById('post-status');
+  const submitBtn = e.target.querySelector('button[type="submit"]');
 
   if (!title || !content) {
     status.textContent = 'Please add a title and some content.';
@@ -358,26 +358,45 @@ document.getElementById('post-form').addEventListener('submit', (e) => {
     return;
   }
 
-  const posts = loadPosts();
-  posts.unshift({
-    title,
-    content,
-    image: selectedImageDataUrl,
-    date: new Date().toISOString(),
-  });
-  savePosts(posts);
-  renderPosts();
-
-  status.textContent = 'Post published!';
+  submitBtn.disabled = true;
+  status.textContent = 'Publishing…';
   status.className = 'post-status ok';
 
-  setTimeout(() => {
-    document.getElementById('post-form').reset();
-    document.getElementById('post-image-preview').style.display = 'none';
-    selectedImageDataUrl = null;
-    status.className = 'post-status';
-    closeModal(postModal);
-  }, 900);
+  let imageUrl = null;
+  try {
+    if (selectedImageFile) {
+      const safeName = selectedImageFile.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+      const path = `${Date.now()}_${safeName}`;
+      const { error: uploadError } = await supabase.storage
+        .from('blog-images')
+        .upload(path, selectedImageFile);
+      if (uploadError) throw uploadError;
+      const { data: publicUrlData } = supabase.storage.from('blog-images').getPublicUrl(path);
+      imageUrl = publicUrlData.publicUrl;
+    }
+
+    const { error: insertError } = await supabase
+      .from('blog_posts')
+      .insert({ title, content, image_url: imageUrl });
+    if (insertError) throw insertError;
+
+    status.textContent = 'Post published!';
+    await loadPosts();
+
+    setTimeout(() => {
+      document.getElementById('post-form').reset();
+      document.getElementById('post-image-preview').style.display = 'none';
+      selectedImageFile = null;
+      status.className = 'post-status';
+      submitBtn.disabled = false;
+      closeModal(postModal);
+    }, 900);
+  } catch (err) {
+    console.error(err);
+    status.textContent = 'Something went wrong publishing. Please try again.';
+    status.className = 'post-status err';
+    submitBtn.disabled = false;
+  }
 });
 </script>
 </body>
